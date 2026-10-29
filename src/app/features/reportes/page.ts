@@ -88,6 +88,6 @@ export class ReportesPage {
   }
   download(month: string) {
     const [y, m] = month.split('-');
-    return `/api/v1/reports/${encodeURIComponent(this.generatedAccount || this.account)}/${y}/${Number(m)}`;
+    return this.api.url(`reports/${encodeURIComponent(this.generatedAccount || this.account)}/${y}/${Number(m)}`);
   }
 }

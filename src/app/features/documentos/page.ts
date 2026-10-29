@@ -177,7 +177,7 @@ export class DocumentosPage {
     await this.load();
   }
   url(id: string, extension: string) {
-    return '/api/v1/documents/' + id + '/' + extension;
+    return this.api.url('documents/' + id + '/' + extension);
   }
   async importXml(event: Event) {
     const input = event.target as HTMLInputElement;

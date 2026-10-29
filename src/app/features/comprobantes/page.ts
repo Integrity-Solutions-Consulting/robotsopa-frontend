@@ -48,5 +48,5 @@ export class ComprobantesPage {
   async cancel(id:string){await this.api.action(()=>this.api.post('executions/'+id+'/cancel',{}),'Cancelación solicitada.');await this.poll();}
   async resume(id:string){if(this.current()?.query.mode==='Sri'&&!confirm('¿Autoriza reanudar la consulta SRI con los filtros de esta operación?'))return;const e=await this.api.action(()=>this.api.post<Execution>('executions/'+id+'/resume',{}));if(e)this.accept(e);}
   async retry(id:string){if(this.current()?.query.mode==='Sri'&&!confirm('¿Autoriza reintentar la consulta SRI con los mismos filtros?'))return;const e=await this.api.action(()=>this.api.post<Execution>('executions/'+id+'/retry',{}));if(e)this.accept(e);}
-  reportLink(e:Execution,r:{year:number;month:number}){return '/api/v1/reports/'+encodeURIComponent(e.query.account)+'/'+r.year+'/'+r.month;}
+  reportLink(e:Execution,r:{year:number;month:number}){return this.api.url('reports/'+encodeURIComponent(e.query.account)+'/'+r.year+'/'+r.month);}
 }

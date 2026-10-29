@@ -96,17 +96,18 @@ export class Api {
   readonly noticeKind = signal<'info'|'loading'|'success'|'error'>('info');
   notify(message:string,kind:'info'|'loading'|'success'|'error'='info'){this.noticeKind.set(kind);this.notice.set(message);}
   readonly busy = signal(false);
+  url(path: string) { return window.apiBaseUrl + '/api/v1/' + path; }
   get<T>(path: string) {
-    return firstValueFrom(this.http.get<T>('/api/v1/' + path));
+    return firstValueFrom(this.http.get<T>(this.url(path), { withCredentials: true }));
   }
   post<T>(path: string, body: unknown) {
-    return firstValueFrom(this.http.post<T>('/api/v1/' + path, body));
+    return firstValueFrom(this.http.post<T>(this.url(path), body, { withCredentials: true }));
   }
   put<T>(path: string, body: unknown) {
-    return firstValueFrom(this.http.put<T>('/api/v1/' + path, body));
+    return firstValueFrom(this.http.put<T>(this.url(path), body, { withCredentials: true }));
   }
   delete(path: string) {
-    return firstValueFrom(this.http.delete('/api/v1/' + path));
+    return firstValueFrom(this.http.delete(this.url(path), { withCredentials: true }));
   }
   async action<T>(fn: () => Promise<T>, message = ''): Promise<T | undefined> {
     this.busy.set(true);

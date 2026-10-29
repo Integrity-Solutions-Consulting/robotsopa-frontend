@@ -80,8 +80,8 @@ interface SystemInfo { outputHostPath: string; sri: string; }
       <p>Se muestran archivos realmente registrados para la cuenta, fecha y tipo actuales.</p>
       <div class="table-wrap"><table><thead><tr><th>Número</th><th>Fecha</th><th>Receptor</th><th>Total</th><th>Validación</th><th>Archivos</th></tr></thead><tbody>
         @for (d of documents(); track d.id) { <tr><td>{{ d.number }}</td><td>{{ d.issued }}</td><td>{{ d.recipient }}</td><td>{{ d.total }}</td><td>{{ d.status }}<small>{{ d.warning }}</small></td><td>
-          @if (d.xmlPath) { <a [href]="'/api/v1/documents/'+d.id+'/xml'">XML</a> }
-          @if (d.pdfPath) { <a [href]="'/api/v1/documents/'+d.id+'/pdf'">PDF</a> }
+          @if (d.xmlPath) { <a [href]="api.url('documents/'+d.id+'/xml')">XML</a> }
+          @if (d.pdfPath) { <a [href]="api.url('documents/'+d.id+'/pdf')">PDF</a> }
         </td></tr> } @empty { <tr><td colspan="6">Sin documentos registrados para esta selección.</td></tr> }
       </tbody></table></div>
       <div class="actions"><button class="secondary" [disabled]="!account || !documents().length || api.busy()" (click)="report()">Generar Excel mensual</button>
@@ -134,7 +134,7 @@ export class ConexionSriPage {
           if (docs.items.length) {
             const url='reports/'+encodeURIComponent(selected)+'/'+date.slice(0,4)+'/'+Number(date.slice(5,7));
             // El enlace se habilita solo tras generar desde este panel; no se infiere por estado de ejecución.
-            if (this.generatedFor === selected+'/'+date.slice(0,7)) this.reportUrl.set('/api/v1/'+url);
+            if (this.generatedFor === selected+'/'+date.slice(0,7)) this.reportUrl.set(this.api.url(url));
           }
         }
       }
