@@ -13,16 +13,25 @@ import { Api } from './core/api';
           <div class="brand">SRI<span>Automation</span></div>
           <p>Administración local de comprobantes electrónicos</p>
           <form (submit)="$event.preventDefault(); login()">
+            <label>Usuario<input autocomplete="username" [formControl]="username" /></label>
             <label
               >Contraseña del panel<input
                 type="password"
                 autocomplete="current-password"
                 [formControl]="password" /></label
-            ><button [disabled]="api.busy() || !password.value">Entrar al panel</button>
+            ><button [disabled]="api.busy() || !username.value || !password.value">Entrar al panel</button>
           </form>
         </section>
       </main>
-    } @else {
+    } @else if (api.mustChange()) {
+      <main class="login"><section class="card"><h1>Cambiar contraseña</h1><p>Antes de continuar, crea una contraseña personal de al menos 12 caracteres.</p>
+      <form (submit)="$event.preventDefault(); changePassword()">
+        <label>Contraseña actual<input type="password" autocomplete="current-password" [formControl]="currentPassword" /></label>
+        <label>Nueva contraseña<input type="password" autocomplete="new-password" [formControl]="newPassword" /></label>
+        <label>Confirmar contraseña<input type="password" autocomplete="new-password" [formControl]="confirmPassword" /></label>
+        <button [disabled]="api.busy() || !currentPassword.value || newPassword.value.length<12 || newPassword.value!==confirmPassword.value">Cambiar contraseña</button>
+        <button type="button" class="secondary" (click)="api.logout()">Cerrar sesión</button>
+      </form></section></main>    } @else {
       <div class="shell" [class.collapsed]="collapsed()">
         <aside>
           <div class="brand">SRI<span>Automation</span></div>
@@ -63,7 +72,12 @@ import { Api } from './core/api';
 export class App {
   api = inject(Api);
   collapsed = signal(false);
+  username = new FormControl('', { nonNullable: true });
   password = new FormControl('', { nonNullable: true });
+  currentPassword = new FormControl('', { nonNullable: true });
+  newPassword = new FormControl('', { nonNullable: true });
+  confirmPassword = new FormControl('', { nonNullable: true });
+  async changePassword(){const result=await this.api.action(()=>this.api.post('auth/change-password',{currentPassword:this.currentPassword.value,newPassword:this.newPassword.value}),'Contraseña actualizada.');this.currentPassword.reset();this.newPassword.reset();this.confirmPassword.reset();if(result){this.api.mustChange.set(false);await this.api.loadDefault();}}
   links = [
     ['/inicio', 'Inicio'],
     ['/comprobantes', 'Comprobantes'],
@@ -76,7 +90,7 @@ export class App {
     const media=matchMedia('(prefers-color-scheme: dark)');const follow=()=>this.api.applyTheme();media.addEventListener('change',follow);inject(DestroyRef).onDestroy(()=>media.removeEventListener('change',follow));
   }
   async login() {
-    await this.api.login(this.password.value);
+    await this.api.login(this.username.value, this.password.value);
     this.password.reset();
   }
   theme() {

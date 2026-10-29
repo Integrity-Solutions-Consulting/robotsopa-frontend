@@ -1,3 +1,16 @@
 node_modules
 dist
 .angular
+.git
+.env*
+!.env.example
+*.key
+*.pem
+*.pfx
+*.p12
+*.db*
+storage
+downloads
+sessions
+credentials
+.secrets

@@ -1,0 +1,14 @@
+services:
+  front:
+    build: .
+    restart: unless-stopped
+    expose: ["80"]
+    networks: [sri-shared, dokploy-network]
+    labels:
+      traefik.docker.network: dokploy-network
+networks:
+  sri-shared:
+    external: true
+    name: botsopa-sri-network
+  dokploy-network:
+    external: true

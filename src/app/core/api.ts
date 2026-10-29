@@ -89,6 +89,8 @@ export class Api {
   private http = inject(HttpClient);
   readonly authenticated = signal(false);
   readonly user = signal('');
+  readonly role = signal('');
+  readonly mustChange = signal(false);
   readonly activeAccount = signal('');
   readonly notice = signal('');
   readonly noticeKind = signal<'info'|'loading'|'success'|'error'>('info');
@@ -127,22 +129,22 @@ export class Api {
       this.busy.set(false);
     }
   }
-  async login(password: string) {
-    const response = await this.action(() => this.post<{user:string}>('auth/login', { password }));
-    if (response) {this.authenticated.set(true);this.user.set(response.user);await this.loadDefault();}
+  async login(username: string, password: string) {
+    const response = await this.action(() => this.post<{user:string;role:string;mustChange:boolean}>('auth/login', { username, password }));
+    if (response) {this.authenticated.set(true);this.user.set(response.user);this.role.set(response.role);this.mustChange.set(response.mustChange);if(!response.mustChange)await this.loadDefault();}
   }
   async session() {
     try {
-      const session=await this.get<{user:string}>('auth/session');this.user.set(session.user);
+      const session=await this.get<{user:string;role:string;mustChange:boolean}>('auth/session');this.user.set(session.user);this.role.set(session.role);this.mustChange.set(session.mustChange);
       this.authenticated.set(true);
-      await this.loadDefault();
+      if(!this.mustChange())await this.loadDefault();
     } catch {
       this.authenticated.set(false);
     }
   }
   async logout() {
     await this.action(() => this.post('auth/logout', {}));
-    this.authenticated.set(false);
+    this.authenticated.set(false); this.activeAccount.set(''); this.user.set(''); this.role.set(''); this.mustChange.set(false);
   }
   async loadDefault() { const settings=await this.get<{defaultAccount?:string}>('settings');if(!this.activeAccount())this.activeAccount.set(settings.defaultAccount||''); }
   applyTheme(value=localStorage.getItem('sri-theme')||'auto') {
