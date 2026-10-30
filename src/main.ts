@@ -2,7 +2,7 @@ import { bootstrapApplication } from '@angular/platform-browser';
 import { appConfig } from './app/app.config';
 import { App } from './app/app';
 
-fetch('app.config.json', { cache: 'no-store' }).then(async response => {
+fetch('/app.config.json', { cache: 'no-store' }).then(async response => {
   if (!response.ok) throw new Error('No se pudo cargar app.config.json');
   const config = await response.json();
   if (typeof config.apiBaseUrl !== 'string') throw new Error('apiBaseUrl no es válido');

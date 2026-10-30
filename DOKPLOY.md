@@ -1,5 +1,15 @@
 # Frontend independiente en Dokploy
 
-Seleccione Dockerfile `Dockerfile`, contexto raíz de este repositorio y puerto 80. Configure en Environment `API_BASE_URL=https://api.midominio.com` con el dominio público de la API. El contenedor genera `app.config.json` al iniciar; para cambiar la URL, cambie la variable y reinicie o redespliegue sin recompilar. No introduzca secretos en este proyecto. En la aplicación backend configure su CORS para el origen HTTPS exacto de este frontend.
+Si Dokploy clona este monorepositorio, seleccione el método Dockerfile, contexto `front` y Dockerfile `front/Dockerfile` (o `Dockerfile` si la interfaz interpreta la ruta relativa al contexto). El puerto interno es `80`. Si se publica `front` como repositorio independiente, use contexto `.` y Dockerfile `Dockerfile`.
 
-También puede usar `compose.dokploy.yml` como una aplicación Compose independiente; contiene solo el frontend. No requiere la red ni el nombre interno de la API.
+Configure en Environment:
+
+```env
+API_BASE_URL=https://botisc.dokploy.integritysolutions.com.ec
+```
+
+Debe ser únicamente el origen HTTPS de la API, sin `/api`. Al iniciar, el contenedor genera `app.config.json`; cambiar la variable y reiniciar el contenedor aplica la nueva dirección sin reconstruir la imagen. Sin la variable, el contenedor no arranca. Para desarrollo, `npm start` utiliza la configuración vacía de `public/app.config.json` y el proxy local de `proxy.conf.json`.
+
+Publique el frontend con HTTPS y configure en el backend el origen exacto del frontend en `Cors__AllowedOrigins__0` (por ejemplo `https://panel.ejemplo.com`, sin barra final), conservando los demás orígenes necesarios. El backend debe permitir credenciales y tener `SRI_COOKIE_SECURE=true`, de modo que la cookie de sesión use `Secure` y `SameSite=None`. Si los dominios son de sitios diferentes, las políticas del navegador pueden bloquear cookies de terceros incluso con esos ajustes; use preferentemente subdominios HTTPS del mismo sitio y pruebe el inicio de sesión y las descargas con el dominio real. No incluya secretos en el frontend ni en `API_BASE_URL`.
+
+Las contraseñas SRI introducidas por el usuario se envían al backend para la funcionalidad existente; no deben incluirse como valores predefinidos en el código ni en la imagen.
