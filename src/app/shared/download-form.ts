@@ -6,6 +6,7 @@ import { Api, Account, Query } from '../core/api';
     <label>Cuenta SRI<select aria-label="Cuenta SRI" formControlName="account" (change)="api.activeAccount.set(form.controls.account.value)"><option value="">Seleccione una cuenta</option>
       @for(a of accounts();track a.id){<option [value]="a.id">{{ a.name }}</option>}
     </select></label>
+    <label>Destino<select formControlName="storageMode"><option value="LOCAL_WINDOWS">Escritorio Windows</option><option value="SHAREPOINT">SharePoint (requiere habilitación)</option></select></label>
     <label>Fecha inicial<input type="date" formControlName="from" [max]="today" /></label>
     <label>Fecha final<input type="date" formControlName="to" [min]="form.controls.from.value" [max]="today" /></label>
     <fieldset class="full"><legend>Tipos de comprobante · {{ selected().length }} seleccionados</legend>
@@ -26,9 +27,9 @@ export class QueryForm {
   types=['Facturas','Retenciones','Notas-Credito','Notas-Debito','Liquidaciones','Guias-Remision'];
   names:Record<string,string>={'Facturas':'Facturas','Retenciones':'Retenciones','Notas-Credito':'Notas de crédito','Notas-Debito':'Notas de débito','Liquidaciones':'Liquidaciones','Guias-Remision':'Guías de remisión'};
   today=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Guayaquil'}).format(new Date());
-  form=this.fb.nonNullable.group({account:[this.api.activeAccount(),Validators.required],from:[this.today,Validators.required],to:[this.today,Validators.required],mode:['Sri'],establishment:['',Validators.pattern(/^\d{3}$|^$/)],emissionPoint:['',Validators.pattern(/^\d{3}$|^$/)]});
+  form=this.fb.nonNullable.group({account:[this.api.activeAccount(),Validators.required],from:[this.today,Validators.required],to:[this.today,Validators.required],mode:['Sri'],storageMode:['LOCAL_WINDOWS'],establishment:['',Validators.pattern(/^\d{3}$|^$/)],emissionPoint:['',Validators.pattern(/^\d{3}$|^$/)]});
   constructor(){void this.api.action(async()=>{this.accounts.set(await this.api.get<Account[]>('accounts'));if(!this.form.controls.account.value)this.form.controls.account.setValue(this.api.activeAccount());});}
   toggle(type:string){this.selected.update(items=>items.includes(type)?items.filter(t=>t!==type):[...items,type]);}
-  value():Query{return {...this.form.getRawValue(),types:[...this.selected()],pdf:true,xml:false,authorizationStatus:'Autorizado'};}
+  value():Query{return {...this.form.getRawValue(),storageMode:this.form.controls.mode.value === 'Stored' ? 'LEGACY' : this.form.controls.storageMode.value,types:[...this.selected()],pdf:true,xml:false,authorizationStatus:'Autorizado'};}
   submit(){const q=this.value();if(!q.from||!q.to){this.error.set('Revise las fechas seleccionadas.');return;}const limit=new Date(q.from+'T00:00:00Z');const month=limit.getUTCMonth();limit.setUTCFullYear(limit.getUTCFullYear()+1);if(limit.getUTCMonth()!==month)limit.setUTCDate(0);limit.setUTCDate(limit.getUTCDate()-1);this.error.set(q.to<q.from||q.to>this.today?'Revise las fechas seleccionadas.':q.to>limit.toISOString().slice(0,10)?'El rango máximo es de un año.':'');if(this.form.valid&&this.selected().length&&!this.error())this.submitted.emit(q);}
 }

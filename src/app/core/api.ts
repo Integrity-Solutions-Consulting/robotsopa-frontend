@@ -14,6 +14,7 @@ export interface Query {
   to: string;
   types: string[];
   mode: string;
+  storageMode?: string;
   pdf: boolean;
   xml: boolean;
   establishment: string;
@@ -23,6 +24,9 @@ export interface Query {
   maxDocuments?: number;
 }
 export interface Execution {
+  deliveryTotal?: number;
+  deliveryCompleted?: number;
+  deliveryError?: string;
   reports?: {year:number;month:number;path:string}[];
   events?: {at:string;stage:string;message:string}[];
   id: string;

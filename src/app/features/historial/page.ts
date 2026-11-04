@@ -38,12 +38,21 @@ import { Api, Execution } from '../../core/api';
                 <td>{{ duration(e) }}</td>
                 <td>
                   <span class="badge">{{ e.status }}</span>
+                  <small>{{ e.stage }} ? {{ e.message }}</small>
+                  @if (queryTotal(e) > 0) {
+                    <label>Consultas SRI: {{ queryDone(e) }} / {{ queryTotal(e) }}
+                      <progress [value]="queryDone(e)" [max]="queryTotal(e)"></progress>
+                    </label>
+                  }
                 </td>
                 <td>{{ e.processed }} / {{ e.found }} · {{ e.errors }} errores</td>
                 <td>
                   <details>
                     <summary>Ver detalles</summary>
                     <p>{{ e.message }}</p>
+                    @if (e.deliveryTotal) { <p>Entregas confirmadas: {{ e.deliveryCompleted || 0 }} / {{ e.deliveryTotal }}</p> }
+                    @if (e.deliveryError) { <p class="error">{{ e.deliveryError }}</p> }
+                    @if (e.status === 'WaitingForDelivery') { <p>Entrega pendiente: mantenga el agente Windows conectado. Los archivos permanecen en el servidor hasta la confirmación.</p> }
                     <small>{{ e.id }} · {{ e.checkpoint }}</small>
                     @for (q of e.queries || []; track $index) {
                       <p>
@@ -100,6 +109,15 @@ export class HistorialPage {
     await this.api.action(async () =>
       this.executions.set(await this.api.get<Execution[]>('executions')),
     );
+  }
+  queryTotal(e: Execution): number {
+    if (e.query.mode !== 'Sri') return 0;
+    const days = Math.floor((Date.parse(e.query.to + 'T00:00:00Z') - Date.parse(e.query.from + 'T00:00:00Z')) / 86400000) + 1;
+    return Number.isFinite(days) && days > 0 ? days * e.query.types.length : 0;
+  }
+  queryDone(e: Execution): number {
+    const completed = (e.queries ?? []).filter(q => ['Consultado', 'SinDocumentos', 'ConErrores'].includes(q.status));
+    return Math.min(this.queryTotal(e), new Set(completed.map(q => q.date + '|' + q.type)).size);
   }
   async cancel(e: Execution) {
     await this.api.action(
