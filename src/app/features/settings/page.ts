@@ -1,11 +1,10 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormsModule,ReactiveFormsModule,FormBuilder,Validators } from '@angular/forms';
-import { DomSanitizer } from '@angular/platform-browser';
 import { Api,Account } from '../../core/api';
-interface Session {status:string;verified:boolean;message:string;agentOnline:boolean;present:boolean;operation?:{browserOpened:boolean};}
+interface Session {status:string;verified:boolean;message:string;present:boolean;operation?:{browserOpened:boolean};}
 interface Settings {defaultAccount:string|null;downloadSubfolder:string|null;}
 @Component({imports:[FormsModule,ReactiveFormsModule],template:`
-  <div class="page-heading"><div><p class="eyebrow">TU ESPACIO LOCAL</p><h1>Configuración</h1><p>Cuentas, acceso al SRI y preferencias.</p></div></div>
+  <div class="page-heading"><div><p class="eyebrow">CONFIGURACION DEL SERVIDOR</p><h1>Configuración</h1><p>Cuentas, acceso al SRI y preferencias.</p></div></div>
   @if(api.role()==='admin'){<div class="two-col"><section class="card"><h2>Agregar cuenta SRI</h2>
     <form [formGroup]="form" (ngSubmit)="save()">
       <label>Alias descriptivo<input formControlName="alias" autocomplete="off" /></label>
@@ -17,16 +16,13 @@ interface Settings {defaultAccount:string|null;downloadSubfolder:string|null;}
     <section class="card"><h2>Cuenta y acceso</h2>
       <label>Cuenta SRI<select aria-label="Cuenta SRI" [ngModel]="selected" (ngModelChange)="choose($event)"><option value="">Seleccione una cuenta</option>@for(a of accounts();track a.id){<option [value]="a.id">{{a.name}}{{a.isTest?' · PRUEBA LOCAL':''}}</option>}</select></label>
       @if(account();as a){
-        <p>RUC: {{a.taxId||a.id}}</p><p>Estado: <strong data-testid="account-state">{{stateLabel()}}</strong></p><p>{{session()?.message||'El bot utilizará la contraseña cifrada para ingresar. Sin contraseña guardada podrá completar el acceso manualmente.'}}</p>
+        <p>RUC: {{a.taxId||a.id}}</p><p>Estado: <strong data-testid="account-state">{{stateLabel()}}</strong></p><p>{{session()?.message||'El Worker utiliza la credencial cifrada al iniciar una consulta.'}}</p>
         <p>{{credential()?.configured?'Contraseña cifrada configurada':'Sin contraseña guardada'}}</p>
         <label>Nueva contraseña SRI<input type="password" [(ngModel)]="replacement" [disabled]="api.busy()||connecting()" autocomplete="new-password" maxlength="1024" /></label>
         <div class="actions"><button class="secondary" [disabled]="!replacement.trim()||api.busy()||connecting()" (click)="saveCredential()">Guardar nueva contraseña</button><button class="danger" [disabled]="!credential()?.configured||api.busy()||connecting()" (click)="deleteCredential()">Eliminar contraseña guardada</button></div>
         @if(connecting()){<p>Cancele la conexión antes de cambiar o eliminar la contraseña guardada.</p>}
-        <div class="actions"><button [disabled]="api.busy()||a.isTest||connecting()" (click)="connect()">Conectar al SRI</button>
-          <button class="danger" [disabled]="!connecting()||api.busy()" (click)="command('Cancel')">Cancelar conexión</button>
+        <div class="actions"><p>El Worker verifica el acceso al iniciar una consulta.</p>
           <button class="secondary" [disabled]="!session()?.present&&!session()?.operation" (click)="logoutSri()">Cerrar sesión del SRI</button></div>
-        @if(session()?.operation?.browserOpened){<p>El navegador del bot está abierto. Si el SRI solicita CAPTCHA o código, complételo allí; el acceso se detecta automáticamente.</p><button class="secondary" [disabled]="api.busy()" (click)="command('Verify')">Listo, comprobar acceso</button><button class="secondary" (click)="command('Show')">Mostrar ventana SRI</button>}
-        @if(!session()?.agentOnline){<a [href]="agentLaunch" class="button secondary">Abrir aplicación local</a>}
         <hr /><label>Alias de la cuenta<input [value]="aliases()[selected]??editName" (input)="editAlias($event)" [disabled]="api.busy()" /></label><button class="secondary" [disabled]="api.busy()" (click)="rename()">Guardar cambios de cuenta</button>
         <div class="actions"><button class="secondary" (click)="setDefault()">Usar como predeterminada</button><button class="danger" (click)="remove()">Eliminar cuenta</button></div>
       }@else{<p>Seleccione o registre una cuenta.</p>}
@@ -61,12 +57,11 @@ export class SettingsPage {
   users=signal<{username:string;role:string;active:boolean}[]>([]);panelUsername='';panelRole='asistente';panelPassword='';
   async loadUsers(){if(this.api.role()==='admin')this.users.set(await this.api.get<{username:string;role:string;active:boolean}[]>('users'));}
   async saveUser(){const result=await this.api.action(()=>this.api.post('users',{username:this.panelUsername,role:this.panelRole,password:this.panelPassword}),'Usuario guardado.');this.panelPassword='';if(result){this.panelUsername='';await this.loadUsers();}}
-  agentLaunch=inject(DomSanitizer).bypassSecurityTrustUrl('sri-automation-agent://start');
   credential=signal<{configured:boolean;updatedAt?:string}|null>(null);replacement='';
   form=this.fb.nonNullable.group({alias:['',[Validators.required,Validators.maxLength(150)]],taxId:['',[Validators.required,Validators.pattern(/^\d{13}$/)]],password:['',[Validators.required,Validators.maxLength(1024)]]});
   constructor(){void this.load();void this.loadUsers();const timer=setInterval(()=>void this.refresh(),2500);inject(DestroyRef).onDestroy(()=>{clearInterval(timer);this.replacement='';this.form.controls.password.reset();});}
   account(){return this.accounts().find(a=>a.id===this.selected);}
-  connecting(){return !!this.session()?.operation?.browserOpened||['Ready','OpeningBrowser','InspectingPortal','WaitingForLogin','RequiresHumanAction'].includes(this.session()?.status||'');}
+  connecting(){return !!this.session()?.operation?.browserOpened||['OpeningBrowser','InspectingPortal','WaitingForLogin'].includes(this.session()?.status||'');}
   stateLabel(){const s=this.session();if(s?.verified)return 'Acceso verificado para esta operación';return ({Ready:'Abriendo portal',OpeningBrowser:'Abriendo portal',InspectingPortal:'Comprobando acceso',RequiresHumanAction:'Esperando acceso',WaitingForLogin:'Esperando que inicie sesión',Expired:'Acceso finalizado',Failed:'Error de conexión',PortalUnavailable:'Portal no disponible',PendingValidation:'Acceso pendiente de validar',VerificationFailed:'No se confirmó el acceso',QueryFailed:'Fallo al abrir la consulta',Cancelled:'Acceso cerrado'} as Record<string,string>)[s?.status||'']||(this.account()?'Cuenta registrada':'Sin cuenta');}
   changeTheme(event:Event){this.theme=(event.target as HTMLSelectElement).value;this.api.setTheme(this.theme);}
   async choose(id:string){this.selected=id;this.api.activeAccount.set(id);this.session.set(null);this.credential.set(null);this.replacement='';this.editName=this.account()?.name||'';await this.refresh();}
@@ -75,8 +70,6 @@ export class SettingsPage {
   async save(){if(this.form.invalid)return;const result=await this.api.action(()=>this.api.post<Account>('accounts/register',this.form.getRawValue()),'Perfil y contraseña cifrada guardados.');this.form.controls.password.reset();if(result){this.form.reset();this.selected=result.id;await this.load();}}
   async saveCredential(){await this.api.action(()=>this.api.put('accounts/'+this.selected+'/credentials',{password:this.replacement}),'Contraseña cifrada actualizada.');this.replacement='';await this.refresh();}
   async deleteCredential(){if(!confirm('¿Eliminar la contraseña guardada? Los documentos y la cuenta se conservan.'))return;await this.api.action(()=>this.api.delete('accounts/'+this.selected+'/credentials'),'Contraseña guardada eliminada.');this.replacement='';await this.refresh();}
-  async connect(){await this.api.action(()=>this.api.post('accounts/'+this.selected+'/connect',{}),'Conexión autorizada iniciada.');await this.refresh();}
-  async command(command:string){await this.api.action(()=>this.api.post('accounts/'+this.selected+'/authentication/'+command,{}));await this.refresh();}
   async logoutSri(){await this.api.action(()=>this.api.post('accounts/'+this.selected+'/logout',{}),'Acceso local revocado.');await this.refresh();}
   editAlias(event:Event){this.aliases.update(v=>({...v,[this.selected]:(event.target as HTMLInputElement).value}));}
   async rename(){const id=this.selected;const result=await this.api.action(()=>this.api.put('accounts/'+id,{name:this.aliases()[id]??this.editName}),'Cuenta actualizada.');await this.load();if(result)this.aliases.update(v=>{const n={...v};delete n[id];return n;});}

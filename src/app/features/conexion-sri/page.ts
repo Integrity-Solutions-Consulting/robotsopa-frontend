@@ -2,11 +2,10 @@ import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { DomSanitizer } from '@angular/platform-browser';
 import { Api, Account, Execution, Voucher } from '../../core/api';
 
 interface Session {
-  status: string; verified: boolean; present: boolean; agentOnline: boolean; message: string;
+  status: string; verified: boolean; present: boolean; message: string;
   lastConnection?: string; lastQuery?: string;
   operation?: { id: string; status: string; browserOpened: boolean; updated: string; expires?: string; cancelRequested: boolean };
 }
@@ -15,8 +14,7 @@ interface SystemInfo { outputHostPath: string; sri: string; }
   imports: [FormsModule, DatePipe, RouterLink],
   template: `
     <div class="page-heading"><div><p class="eyebrow">ACCESO AUTORIZADO · COMPROBANTES EMITIDOS</p>
-      <h1>Prueba de conexión SRI</h1><p>Autenticación manual en el portal oficial y consulta controlada desde este panel.</p></div>
-      <button class="secondary" (click)="refresh()">Actualizar estado</button></div>
+      <h1>Prueba de conexion SRI</h1></div><button class="secondary" (click)="refresh()">Actualizar estado</button></div>
     @if (connectionError()) { <p class="error" role="alert">{{ connectionError() }}</p> }
     <div class="two-col">
     <section class="card"><h2>1. Seleccionar cuenta</h2>
@@ -27,25 +25,14 @@ interface SystemInfo { outputHostPath: string; sri: string; }
       <p><a routerLink="/configuracion">Registrar o administrar cuentas</a></p>
       @if (session(); as s) {
         <p>Estado: <strong data-testid="session-status">{{ s.status }}</strong></p><p>{{ s.message }}</p>
-        <p>Agente Windows: {{ s.agentOnline ? 'Conectado' : 'No disponible' }}</p>
-        @if (!s.agentOnline) {
-          <p><a [href]="agentLaunch">Iniciar agente Windows</a></p>
-          <p class="muted">Autorice la apertura de la aplicación local si el navegador lo solicita. El estado cambiará solo cuando la API reciba su conexión.</p>
-        }
-        <p>Navegador: {{ s.operation?.browserOpened && s.agentOnline ? 'Apertura confirmada' : 'Sin ventana confirmada' }}</p>
         <p>Última conexión verificada: {{ (s.lastConnection | date:'dd/MM/yyyy HH:mm':'-0500') || 'Pendiente' }}</p>
         <p>Última consulta: {{ (s.lastQuery | date:'dd/MM/yyyy HH:mm':'-0500') || 'Pendiente' }}</p>
         <div class="actions">
-          <button [disabled]="api.busy() || !s.agentOnline || interactive() || selectedTest()" (click)="authenticate()">Iniciar sesión SRI</button>
-          <button class="secondary" [disabled]="api.busy() || !s.agentOnline || !s.operation?.browserOpened" (click)="command('Verify')">Verificar conexión</button>
-          <button class="secondary" [disabled]="api.busy() || !s.agentOnline || !s.operation?.browserOpened" (click)="command('Reload')">Reintentar carga del portal</button>
-          <button class="danger" [disabled]="api.busy() || !interactive()" (click)="command('Cancel')">Cancelar autenticación</button>
-          <button class="secondary" [disabled]="api.busy() || (!s.present && !s.operation)" (click)="logout()">Revocar sesión local</button>
-          <button class="secondary" [disabled]="api.busy() || !s.verified || !s.agentOnline || !remoteLogout()" (click)="command('RemoteLogout')">Cerrar sesión en el portal SRI</button>
-          @if (!remoteLogout()) { <p>Cierre remoto no disponible: control de salida pendiente de verificar. Puede revocar la sesión local.</p> }
+          <p>El Worker verifica el acceso al iniciar una consulta.</p>
+          <button class="secondary" [disabled]="api.busy() || (!s.present && !s.operation)" (click)="logout()">Revocar sesion guardada</button>
         </div>
       } @else { <p>Seleccione una cuenta para consultar su estado.</p> }
-      <p class="muted">La contraseña, CAPTCHA y MFA se completan exclusivamente en la ventana del portal oficial. Después abra Comprobantes emitidos, sin buscar, y pulse Verificar conexión aquí.</p>
+      <p class="muted">El Worker utiliza la credencial cifrada. La intervencion remota para CAPTCHA o MFA aun no esta disponible.</p>
     </section>
     <section class="card"><h2>2. Configurar consulta</h2>
       <label>Fecha de prueba<input type="date" [(ngModel)]="date" [max]="today" (ngModelChange)="authorized=false" /></label>
@@ -70,8 +57,8 @@ interface SystemInfo { outputHostPath: string; sri: string; }
         @for (issue of e.issues || []; track $index) { <p class="error">{{ issue }}</p> }
         <div class="actions">
           @if (['Pending','Running','RequiresHumanAction'].includes(e.status)) { <button class="danger" (click)="jobAction('cancel')">Cancelar prueba</button> }
-          @if (e.status === 'RequiresHumanAction') { <button class="secondary" [disabled]="!session()?.verified" (click)="jobAction('resume')">Reanudar consulta autorizada</button> }
-          @if (['Failed','Cancelled','CompletedWithWarnings'].includes(e.status)) { <button class="secondary" [disabled]="!session()?.verified" (click)="jobAction('retry')">Reintentar consulta autorizada</button> }
+          @if (e.status === 'RequiresHumanAction') { <button class="secondary"  (click)="jobAction('resume')">Reanudar consulta autorizada</button> }
+          @if (['Failed','Cancelled','CompletedWithWarnings'].includes(e.status)) { <button class="secondary"  (click)="jobAction('retry')">Reintentar consulta autorizada</button> }
           <a routerLink="/historial">Historial completo</a>
         </div>
       </section>
@@ -89,7 +76,6 @@ interface SystemInfo { outputHostPath: string; sri: string; }
         <a routerLink="/documentos">Administrar archivos</a><a routerLink="/reportes">Reportes por mes y rango</a></div>
     </section>
     <section class="card"><details><summary>Inspección técnica del portal · pendiente hasta verificación real</summary>
-      <p>Complete manualmente la navegación hasta los filtros de emitidos y pulse Verificar conexión. El inventario omite texto, valores, cookies y campos de contraseña. Configurar controles no autoriza consultas.</p>
       <button class="secondary" (click)="loadProfile()">Cargar perfil e inventario</button>
       <label>Perfil de selectores observado (JSON, sin datos personales)<textarea rows="14" [(ngModel)]="profile" spellcheck="false"></textarea></label>
       <button class="secondary" [disabled]="!profile || api.busy()" (click)="saveProfile()">Guardar borrador de selectores</button>
@@ -100,7 +86,6 @@ interface SystemInfo { outputHostPath: string; sri: string; }
 })
 export class ConexionSriPage {
   api = inject(Api);
-  agentLaunch = inject(DomSanitizer).bypassSecurityTrustUrl('sri-automation-agent://start');
   accounts = signal<Account[]>([]); session = signal<Session | null>(null);
   system = signal<SystemInfo | null>(null); current = signal<Execution | null>(null);
   documents = signal<Voucher[]>([]); controls = signal(''); connectionError = signal(''); reportUrl = signal('');
@@ -116,7 +101,7 @@ export class ConexionSriPage {
   }
   selectedTest() { return this.accounts().find(a=>a.id===this.account)?.isTest === true; }
   interactive() { return ['Ready','OpeningBrowser','WaitingForLogin','RequiresHumanAction','InspectingPortal'].includes(this.session()?.operation?.status || ''); }
-  canExecute() { return this.account && this.date && this.date <= this.today && Number.isInteger(this.limit) && this.limit>=1 && this.limit<=10 && this.authorized && this.workerOnline() && this.session()?.verified && this.system()?.sri === 'SessionValidationRequired' && !['Pending','Running'].includes(this.current()?.status || ''); }
+  canExecute() { return this.account && this.date && this.date <= this.today && Number.isInteger(this.limit) && this.limit>=1 && this.limit<=10 && this.authorized && this.workerOnline() && !['Pending','Running'].includes(this.current()?.status || ''); }
   select() { this.session.set(null); this.current.set(null); this.documents.set([]); this.reportUrl.set(''); this.authorized=false; void this.refresh(); }
   async refresh() {
     if (this.refreshing) return; this.refreshing = true;
@@ -143,8 +128,6 @@ export class ConexionSriPage {
     finally { this.refreshing = false; }
   }
   private generatedFor='';
-  async authenticate() { await this.api.action(()=>this.api.post('accounts/'+encodeURIComponent(this.account)+'/authentication',{})); await this.refresh(); }
-  async command(command:string) { await this.api.action(()=>this.api.post('accounts/'+encodeURIComponent(this.account)+'/authentication/'+command,{})); await this.refresh(); }
   async logout() { await this.api.action(()=>this.api.post('accounts/'+encodeURIComponent(this.account)+'/logout',{})); await this.refresh(); }
   async execute() {
     if (!this.canExecute()) return;

@@ -52,7 +52,7 @@ import { Api, Execution } from '../../core/api';
                     <p>{{ e.message }}</p>
                     @if (e.deliveryTotal) { <p>Entregas confirmadas: {{ e.deliveryCompleted || 0 }} / {{ e.deliveryTotal }}</p> }
                     @if (e.deliveryError) { <p class="error">{{ e.deliveryError }}</p> }
-                    @if (e.status === 'WaitingForDelivery') { <p>Entrega pendiente: mantenga el agente Windows conectado. Los archivos permanecen en el servidor hasta la confirmación.</p> }
+                    @if (e.status === 'WaitingForDelivery') { <p>Entrega historica pendiente de revision. No se ha confirmado la entrega; los archivos permanecen en el servidor.</p> }
                     <small>{{ e.id }} · {{ e.checkpoint }}</small>
                     @for (q of e.queries || []; track $index) {
                       <p>
