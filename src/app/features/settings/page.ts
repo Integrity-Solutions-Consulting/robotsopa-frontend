@@ -43,6 +43,13 @@ interface Settings {defaultAccount:string|null;downloadSubfolder:string|null;}
       <label>Asistente<select [(ngModel)]="assignmentUser" (ngModelChange)="loadAssignments()"><option value="">Seleccione</option>@for(u of users();track u.username){@if(u.role==='asistente'){<option [value]="u.username">{{u.username}}</option>}}</select></label>
       @if(assignmentUser){@for(a of accounts();track a.id){<label class="inline"><input type="checkbox" [checked]="assignments().includes(a.id)" (change)="assign(a.id,$event)" />{{a.name}} · {{a.taxId||a.id}}</label>}}
     </section>}
+    <section class="card"><h2>Agentes de entrega Windows</h2>
+      <p>Registre un agente por equipo. El secreto se muestra una sola vez.</p>
+      <label>Nombre del equipo<input [(ngModel)]="agentLabel" maxlength="100" /></label>
+      <div class="actions"><button [disabled]="!agentLabel.trim()||api.busy()" (click)="registerAgent()">Registrar agente</button><button class="secondary" (click)="loadAgents()">Consultar agentes</button></div>
+      @if(newAgent();as a){<p>Guarde estas credenciales en el equipo antes de cerrar esta pantalla.</p><p>ID: <code>{{a.id}}</code></p><label>Secreto<input readonly [value]="a.secret" /></label><button class="secondary" (click)="newAgent.set(null)">Ocultar secreto</button>}
+      @for(a of agents();track a.id){<p>{{a.label}} · {{a.revokedAt?'Revocado':'Activo'}} @if(!a.revokedAt){<button class="danger" (click)="revokeAgent(a.id)">Revocar</button>}</p>}
+    </section>
     <section class="card"><h2>Preferencias</h2><div class="form-grid">
       <label>Apariencia<select [value]="theme" (change)="changeTheme($event)"><option value="light">Claro</option><option value="dark">Oscuro</option><option value="auto">Automático según sistema</option></select></label>
       <label>Cuenta predeterminada<select aria-label="Cuenta predeterminada" [(ngModel)]="settings.defaultAccount"><option [ngValue]="null">Sin predeterminada</option>@for(a of accounts();track a.id){<option [value]="a.id">{{a.name}}</option>}</select></label>
@@ -51,6 +58,10 @@ interface Settings {defaultAccount:string|null;downloadSubfolder:string|null;}
     </div><div class="actions"><button class="secondary" (click)="saveSettings()">Guardar preferencias</button><button class="secondary" (click)="api.logout()">Cerrar sesión del panel</button></div></section>`})
 export class SettingsPage {
   api=inject(Api);fb=inject(FormBuilder);aliases=signal<Record<string,string>>({});accounts=signal<Account[]>([]);session=signal<Session|null>(null);selected=this.api.activeAccount();editName='';theme=localStorage.getItem('sri-theme')||'auto';destination=signal('');settings:Settings={defaultAccount:null,downloadSubfolder:null};
+  agentLabel='';agents=signal<{id:string;label:string;revokedAt:string|null}[]>([]);newAgent=signal<{id:string;secret:string}|null>(null);
+  async loadAgents(){const result=await this.api.action(()=>this.api.get<{id:string;label:string;revokedAt:string|null}[]>('delivery-agents'));if(result)this.agents.set(result);}
+  async registerAgent(){const result=await this.api.action(()=>this.api.post<{id:string;secret:string}>('delivery-agents',{label:this.agentLabel.trim()}),'Agente registrado.');if(result){this.newAgent.set(result);this.agentLabel='';await this.loadAgents();}}
+  async revokeAgent(id:string){if(!confirm('¿Revocar este agente?'))return;await this.api.action(()=>this.api.delete('delivery-agents/'+encodeURIComponent(id)),'Agente revocado.');await this.loadAgents();}
   assignmentUser='';assignments=signal<string[]>([]);
   async loadAssignments(){this.assignments.set(this.assignmentUser?await this.api.get<string[]>('assignments/'+encodeURIComponent(this.assignmentUser)):[]);}
   async assign(account:string,event:Event){await this.api.action(()=>this.api.post('assignments',{username:this.assignmentUser,account,assigned:(event.target as HTMLInputElement).checked}),'Asignación actualizada.');await this.loadAssignments();}
