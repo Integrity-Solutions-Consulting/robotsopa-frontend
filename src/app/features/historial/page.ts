@@ -1,10 +1,11 @@
 import { Component, inject, signal, DestroyRef } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { Api, Execution } from '../../core/api';
+import { FormsModule } from '@angular/forms';
+import { Api, Execution, Account } from '../../core/api';
 @Component({
   selector:'sri-ejecuciones',
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, RouterLink, FormsModule],
   template: `<div class="page-heading">
       <div>
         <p class="eyebrow">TRAZABILIDAD</p>
@@ -14,11 +15,13 @@ import { Api, Execution } from '../../core/api';
       <button class="secondary" (click)="load()">Actualizar</button>
     </div>
     <section class="card">
+      <label>Filtrar por estado <select [(ngModel)]="filter"><option value="">Todos</option><option value="Pending">Pendiente</option><option value="Running">Ejecutando</option><option value="Cancelling">Cancelando</option><option value="Completed">Completado</option><option value="Cancelled">Cancelado</option><option value="Failed">Fallido</option><option value="RequiresHumanAction">Requiere intervención humana</option><option value="CompletedWithWarnings">Completado con pendientes</option></select></label>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
               <th>Cuenta / rango</th>
+              <th>Usuario</th>
               <th>Inicio</th>
               <th>Finalización</th>
               <th>Duración</th>
@@ -28,17 +31,18 @@ import { Api, Execution } from '../../core/api';
             </tr>
           </thead>
           <tbody>
-            @for (e of executions(); track e.id) {
+            @for (e of filtered(); track e.id) {
               <tr>
                 <td>
-                  {{ e.query.account }}<small>{{ e.query.from }} → {{ e.query.to }}</small>
+                  {{ accountName(e.query.account) }}<small>{{ e.query.mode === 'Sri' ? 'Descarga SRI' : 'Actualización de reportes' }} · {{ e.query.from }} → {{ e.query.to }}</small>
                 </td>
+                <td>{{ e.requestedBy || 'Sistema' }}</td>
                 <td>{{ e.created | date: 'dd/MM/yyyy HH:mm' : '-0500' }}</td>
                 <td>{{ e.finished | date: 'dd/MM/yyyy HH:mm' : '-0500' }}</td>
                 <td>{{ duration(e) }}</td>
                 <td>
-                  <span class="badge">{{ e.status }}</span>
-                  <small>{{ e.stage }} ? {{ e.message }}</small>
+                  <span class="badge">{{ status(e.status) }}</span>
+                  <small>{{ e.message }}</small>
                   @if (queryTotal(e) > 0) {
                     <label>Consultas SRI: {{ queryDone(e) }} / {{ queryTotal(e) }}
                       <progress [value]="queryDone(e)" [max]="queryTotal(e)"></progress>
@@ -72,24 +76,14 @@ import { Api, Execution } from '../../core/api';
                     <button class="secondary" (click)="cancel(e)">Cancelar</button>
                   }
                   @if (e.status === 'RequiresHumanAction') {
-                    <p class="muted">
-                      Complete la conexión o verificación humana en Configuración y reanude.
-                    </p>
+                    <p class="muted">Revise el motivo. La intervención remota para CAPTCHA o MFA aún no está disponible.</p>
                     <a routerLink="/configuracion">Conectar cuenta SRI</a>
-                    <button class="secondary" (click)="resume(e)">Reanudar</button>
-                  }
-                  @if (
-                    e.status === 'Failed' ||
-                    e.status === 'Cancelled' ||
-                    e.status === 'CompletedWithWarnings'
-                  ) {
-                    <button class="secondary" (click)="retry(e)">Reintentar trabajo</button>
                   }
                 </td>
               </tr>
             } @empty {
               <tr>
-                <td colspan="7" class="empty">Todavía no hay ejecuciones.</td>
+                <td colspan="8" class="empty">No hay ejecuciones para el filtro seleccionado.</td>
               </tr>
             }
           </tbody>
@@ -100,15 +94,19 @@ import { Api, Execution } from '../../core/api';
 export class HistorialPage {
   api = inject(Api);
   executions = signal<Execution[]>([]);
+  accounts = signal<Account[]>([]);
+  filter = '';
+  filtered() { return this.executions().filter(e => !this.filter || e.status === this.filter); }
+  accountName(id: string) { return this.accounts().find(a => a.id === id)?.name || id; }
+  status(value: string) { return ({Pending:'Pendiente',Running:'Ejecutando',Cancelling:'Cancelando...',Completed:'Completado',Cancelled:'Cancelado',Failed:'Fallido',RequiresHumanAction:'Requiere intervención humana',CompletedWithWarnings:'Completado con pendientes'} as Record<string,string>)[value] || value; }
   constructor() {
     void this.load();
     const timer = setInterval(() => void this.load(), 5000);
     inject(DestroyRef).onDestroy(() => clearInterval(timer));
   }
   async load() {
-    await this.api.action(async () =>
-      this.executions.set(await this.api.get<Execution[]>('executions')),
-    );
+    try { const [executions, accounts] = await Promise.all([this.api.get<Execution[]>('executions'), this.api.get<Account[]>('accounts')]); this.executions.set(executions); this.accounts.set(accounts); }
+    catch { this.api.notify('No se pudo actualizar el historial.', 'error'); }
   }
   queryTotal(e: Execution): number {
     if (e.query.mode !== 'Sri') return 0;
@@ -135,19 +133,5 @@ export class HistorialPage {
           ),
         ) + ' s'
       : '—';
-  }
-  async resume(e: Execution) {
-    await this.api.action(
-      () => this.api.post('executions/' + e.id + '/resume', {}),
-      'Reanudación solicitada.',
-    );
-    await this.load();
-  }
-  async retry(e: Execution) {
-    await this.api.action(
-      () => this.api.post('executions/' + e.id + '/retry', {}),
-      'Nuevo intento en cola; el historial anterior se conserva.',
-    );
-    await this.load();
   }
 }

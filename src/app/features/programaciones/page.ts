@@ -56,7 +56,6 @@ import { QueryForm } from '../../shared/download-form';
             <button class="secondary" (click)="update(s)">Guardar cambios</button
             ><button class="secondary" (click)="s.enabled = !s.enabled; update(s)">
               {{ s.enabled ? 'Desactivar' : 'Activar' }}</button
-            ><button class="secondary" (click)="run(s)">Ejecutar ahora</button
             ><button class="danger" (click)="remove(s)">Eliminar</button>
           </div>
         </article>

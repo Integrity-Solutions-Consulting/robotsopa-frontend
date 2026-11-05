@@ -42,6 +42,10 @@ export interface Execution {
   message?: string;
   checkpoint?: string;
   downloaded?: number;
+  progressPercent?: number | null;
+  pendingDocuments?: number | null;
+  cancelRequested?: boolean;
+  requestedBy?: string;
   issues?: string[];
   queries?: {
     date: string;
@@ -104,8 +108,8 @@ export class Api {
   get<T>(path: string) {
     return firstValueFrom(this.http.get<T>(this.url(path), { withCredentials: true }));
   }
-  post<T>(path: string, body: unknown) {
-    return firstValueFrom(this.http.post<T>(this.url(path), body, { withCredentials: true }));
+  post<T>(path: string, body: unknown, idempotencyKey?: string) {
+    return firstValueFrom(this.http.post<T>(this.url(path), body, { withCredentials: true, headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {} }));
   }
   put<T>(path: string, body: unknown) {
     return firstValueFrom(this.http.put<T>(this.url(path), body, { withCredentials: true }));

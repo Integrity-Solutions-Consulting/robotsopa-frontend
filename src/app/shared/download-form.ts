@@ -19,11 +19,11 @@ import { Api, Account, Query } from '../core/api';
       <label>Establecimiento<input formControlName="establishment" maxlength="3" /></label><label>Punto de emisión<input formControlName="emissionPoint" maxlength="3" /></label>
     </div></details>
     @if(error()){<p class="error full">{{ error() }}</p>}
-    <div class="actions full"><button [disabled]="form.invalid||!selected().length||api.busy()">{{ label() }}</button><ng-content /></div>
+    <div class="actions full"><button [disabled]="form.invalid||!selected().length||api.busy()||blocked()">{{ label() }}</button><ng-content /></div>
   </form>`})
 export class QueryForm {
   api=inject(Api);fb=inject(FormBuilder);accounts=signal<Account[]>([]);selected=signal(['Facturas']);error=signal('');
-  label=input('Descargar comprobantes');submitted=output<Query>();
+  label=input('Descargar comprobantes');blocked=input(false);submitted=output<Query>();
   types=['Facturas','Retenciones','Notas-Credito','Notas-Debito','Liquidaciones','Guias-Remision'];
   names:Record<string,string>={'Facturas':'Facturas','Retenciones':'Retenciones','Notas-Credito':'Notas de crédito','Notas-Debito':'Notas de débito','Liquidaciones':'Liquidaciones','Guias-Remision':'Guías de remisión'};
   today=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Guayaquil'}).format(new Date());

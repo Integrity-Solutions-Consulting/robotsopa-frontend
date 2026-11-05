@@ -10,6 +10,11 @@
   --nav: #112d45;
   --shadow: 0 3px 16px #172e4307;
 }
+.progress-label { display: grid; gap: .5rem; color: var(--muted); margin: 1rem 0; }
+.progress-label progress { width: 100%; height: 1rem; accent-color: var(--accent); }
+.progress-stats { display: flex; flex-wrap: wrap; gap: .75rem; margin: 1rem 0; }
+.progress-stats span { flex: 1 1 120px; padding: .8rem; border: 1px solid var(--line); border-radius: .65rem; color: var(--muted); }
+.progress-stats strong { display: block; color: var(--ink); font-size: 1.2rem; }
 :root[data-theme='dark'] {
   color-scheme: dark;
   --bg: #0d1a27;
