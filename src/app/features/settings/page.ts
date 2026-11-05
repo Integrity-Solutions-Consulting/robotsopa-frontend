@@ -1,9 +1,11 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { FormsModule,ReactiveFormsModule,FormBuilder,Validators } from '@angular/forms';
 import { Api,Account } from '../../core/api';
 interface Session {status:string;verified:boolean;message:string;present:boolean;operation?:{browserOpened:boolean};}
+interface Agent {id:string;label:string;revokedAt:string|null;lastSeenAt?:string|null;online?:boolean;executionAvailable?:boolean;}
 interface Settings {defaultAccount:string|null;downloadSubfolder:string|null;}
-@Component({imports:[FormsModule,ReactiveFormsModule],template:`
+@Component({imports:[FormsModule,ReactiveFormsModule,DatePipe],template:`
   <div class="page-heading"><div><p class="eyebrow">CONFIGURACION DEL SERVIDOR</p><h1>Configuración</h1><p>Cuentas, acceso al SRI y preferencias.</p></div></div>
   @if(api.role()==='admin'){<div class="two-col"><section class="card"><h2>Agregar cuenta SRI</h2>
     <form [formGroup]="form" (ngSubmit)="save()">
@@ -43,12 +45,12 @@ interface Settings {defaultAccount:string|null;downloadSubfolder:string|null;}
       <label>Asistente<select [(ngModel)]="assignmentUser" (ngModelChange)="loadAssignments()"><option value="">Seleccione</option>@for(u of users();track u.username){@if(u.role==='asistente'){<option [value]="u.username">{{u.username}}</option>}}</select></label>
       @if(assignmentUser){@for(a of accounts();track a.id){<label class="inline"><input type="checkbox" [checked]="assignments().includes(a.id)" (change)="assign(a.id,$event)" />{{a.name}} · {{a.taxId||a.id}}</label>}}
     </section>}
-    <section class="card"><h2>Agentes de entrega Windows</h2>
-      <p>Registre un agente por equipo. El secreto se muestra una sola vez.</p>
+    <section class="card"><h2>Agentes Windows</h2>
+      <p>Registre un agente por equipo con su usuario del panel. El secreto se muestra una sola vez. El agente procesa ?nicamente las tareas creadas por este usuario para cuentas autorizadas.</p>
       <label>Nombre del equipo<input [(ngModel)]="agentLabel" maxlength="100" /></label>
       <div class="actions"><button [disabled]="!agentLabel.trim()||api.busy()" (click)="registerAgent()">Registrar agente</button><button class="secondary" (click)="loadAgents()">Consultar agentes</button></div>
       @if(newAgent();as a){<p>Guarde estas credenciales en el equipo antes de cerrar esta pantalla.</p><p>ID: <code>{{a.id}}</code></p><label>Secreto<input readonly [value]="a.secret" /></label><button class="secondary" (click)="newAgent.set(null)">Ocultar secreto</button>}
-      @for(a of agents();track a.id){<p>{{a.label}} · {{a.revokedAt?'Revocado':'Activo'}} @if(!a.revokedAt){<button class="danger" (click)="revokeAgent(a.id)">Revocar</button>}</p>}
+      @for(a of agents();track a.id){<p><strong>{{a.label}}</strong> - {{agentState(a)}} @if(a.lastSeenAt){- Última actividad: {{a.lastSeenAt | date:'dd/MM/yyyy HH:mm:ss':'-0500'}}} @if(!a.revokedAt){<button class="danger" (click)="revokeAgent(a.id)">Revocar</button>}</p>}
     </section>
     <section class="card"><h2>Preferencias</h2><div class="form-grid">
       <label>Apariencia<select [value]="theme" (change)="changeTheme($event)"><option value="light">Claro</option><option value="dark">Oscuro</option><option value="auto">Automático según sistema</option></select></label>
@@ -58,8 +60,10 @@ interface Settings {defaultAccount:string|null;downloadSubfolder:string|null;}
     </div><div class="actions"><button class="secondary" (click)="saveSettings()">Guardar preferencias</button><button class="secondary" (click)="api.logout()">Cerrar sesión del panel</button></div></section>`})
 export class SettingsPage {
   api=inject(Api);fb=inject(FormBuilder);aliases=signal<Record<string,string>>({});accounts=signal<Account[]>([]);session=signal<Session|null>(null);selected=this.api.activeAccount();editName='';theme=localStorage.getItem('sri-theme')||'auto';destination=signal('');settings:Settings={defaultAccount:null,downloadSubfolder:null};
-  agentLabel='';agents=signal<{id:string;label:string;revokedAt:string|null}[]>([]);newAgent=signal<{id:string;secret:string}|null>(null);
-  async loadAgents(){const result=await this.api.action(()=>this.api.get<{id:string;label:string;revokedAt:string|null}[]>('delivery-agents'));if(result)this.agents.set(result);}
+  agentLabel='';agents=signal<Agent[]>([]);newAgent=signal<{id:string;secret:string}|null>(null);
+  agentState(a:Agent){if(a.revokedAt)return 'Revocado';if(a.executionAvailable === false)return 'Registrado - credencial activa - ejecución remota deshabilitada';if(a.online === true)return 'Registrado - credencial activa - conectado';if(a.online === false)return a.lastSeenAt ? 'Registrado - credencial activa - desconectado' : 'Registrado - credencial activa - sin actividad registrada';return 'Registrado - credencial activa - conexión no disponible';}
+  async loadAgents(){const result=await this.api.action(()=>this.api.get<Agent[]>('delivery-agents'));if(result)this.agents.set(result);}
+  async refreshAgents(){try{this.agents.set(await this.api.get<Agent[]>('delivery-agents'));}catch{/* El estado anterior no demuestra conexión actual. */this.agents.update(items=>items.map(a=>({...a,online:undefined,executionAvailable:undefined})));}}
   async registerAgent(){const result=await this.api.action(()=>this.api.post<{id:string;secret:string}>('delivery-agents',{label:this.agentLabel.trim()}),'Agente registrado.');if(result){this.newAgent.set(result);this.agentLabel='';await this.loadAgents();}}
   async revokeAgent(id:string){if(!confirm('¿Revocar este agente?'))return;await this.api.action(()=>this.api.delete('delivery-agents/'+encodeURIComponent(id)),'Agente revocado.');await this.loadAgents();}
   assignmentUser='';assignments=signal<string[]>([]);
@@ -70,7 +74,7 @@ export class SettingsPage {
   async saveUser(){const result=await this.api.action(()=>this.api.post('users',{username:this.panelUsername,role:this.panelRole,password:this.panelPassword}),'Usuario guardado.');this.panelPassword='';if(result){this.panelUsername='';await this.loadUsers();}}
   credential=signal<{configured:boolean;updatedAt?:string}|null>(null);replacement='';
   form=this.fb.nonNullable.group({alias:['',[Validators.required,Validators.maxLength(150)]],taxId:['',[Validators.required,Validators.pattern(/^\d{13}$/)]],password:['',[Validators.required,Validators.maxLength(1024)]]});
-  constructor(){void this.load();void this.loadUsers();const timer=setInterval(()=>void this.refresh(),2500);inject(DestroyRef).onDestroy(()=>{clearInterval(timer);this.replacement='';this.form.controls.password.reset();});}
+  constructor(){void this.load();void this.loadUsers();void this.loadAgents();const timer=setInterval(()=>{void this.refresh();void this.refreshAgents();},10000);inject(DestroyRef).onDestroy(()=>{clearInterval(timer);this.replacement='';this.form.controls.password.reset();});}
   account(){return this.accounts().find(a=>a.id===this.selected);}
   connecting(){return !!this.session()?.operation?.browserOpened||['OpeningBrowser','InspectingPortal','WaitingForLogin'].includes(this.session()?.status||'');}
   stateLabel(){const s=this.session();if(s?.verified)return 'Acceso verificado para esta operación';return ({Ready:'Abriendo portal',OpeningBrowser:'Abriendo portal',InspectingPortal:'Comprobando acceso',RequiresHumanAction:'Esperando acceso',WaitingForLogin:'Esperando que inicie sesión',Expired:'Acceso finalizado',Failed:'Error de conexión',PortalUnavailable:'Portal no disponible',PendingValidation:'Acceso pendiente de validar',VerificationFailed:'No se confirmó el acceso',QueryFailed:'Fallo al abrir la consulta',Cancelled:'Acceso cerrado'} as Record<string,string>)[s?.status||'']||(this.account()?'Cuenta registrada':'Sin cuenta');}
