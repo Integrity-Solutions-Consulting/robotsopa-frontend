@@ -3,5 +3,6 @@ services:
     build: .
     environment:
       API_BASE_URL: ${API_BASE_URL:?Configure API_BASE_URL}
+      WINDOWS_INSTALLER_URL: ${WINDOWS_INSTALLER_URL:-}
     expose:
       - "80"

@@ -46,6 +46,7 @@ interface Settings {defaultAccount:string|null;downloadSubfolder:string|null;}
       @if(assignmentUser){@for(a of accounts();track a.id){<label class="inline"><input type="checkbox" [checked]="assignments().includes(a.id)" (change)="assign(a.id,$event)" />{{a.name}} · {{a.taxId||a.id}}</label>}}
     </section>}
     <section class="card"><h2>Agentes Windows</h2>
+      @if(installerUrl){<a [href]="installerUrl" target="_blank" rel="noopener noreferrer">Descargar SOPA para Windows</a>}@else{<p>El instalador de SOPA para Windows todav?a no est? publicado.</p>}
       <p>Registre un agente por equipo con su usuario del panel. El secreto se muestra una sola vez. El agente procesa ?nicamente las tareas creadas por este usuario para cuentas autorizadas.</p>
       <label>Nombre del equipo<input [(ngModel)]="agentLabel" maxlength="100" /></label>
       <div class="actions"><button [disabled]="!agentLabel.trim()||api.busy()" (click)="registerAgent()">Registrar agente</button><button class="secondary" (click)="loadAgents()">Consultar agentes</button></div>
@@ -60,6 +61,7 @@ interface Settings {defaultAccount:string|null;downloadSubfolder:string|null;}
     </div><div class="actions"><button class="secondary" (click)="saveSettings()">Guardar preferencias</button><button class="secondary" (click)="api.logout()">Cerrar sesión del panel</button></div></section>`})
 export class SettingsPage {
   api=inject(Api);fb=inject(FormBuilder);aliases=signal<Record<string,string>>({});accounts=signal<Account[]>([]);session=signal<Session|null>(null);selected=this.api.activeAccount();editName='';theme=localStorage.getItem('sri-theme')||'auto';destination=signal('');settings:Settings={defaultAccount:null,downloadSubfolder:null};
+  installerUrl=window.windowsInstallerUrl;
   agentLabel='';agents=signal<Agent[]>([]);newAgent=signal<{id:string;secret:string}|null>(null);
   agentState(a:Agent){if(a.revokedAt)return 'Revocado';if(a.executionAvailable === false)return 'Registrado - credencial activa - ejecución remota deshabilitada';if(a.online === true)return a.busy ? 'Ocupado' : 'Conectado';if(a.online === false)return a.lastSeenAt ? 'Desconectado' : 'Sin actividad registrada';return 'Estado de conexión no disponible';}
   async loadAgents(){const result=await this.api.action(()=>this.api.get<Agent[]>('delivery-agents'));if(result)this.agents.set(result);}
