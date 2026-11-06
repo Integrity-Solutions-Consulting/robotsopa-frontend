@@ -57,9 +57,11 @@ import { Api, Account, Query } from '../core/api';
         >
       }
     </fieldset>
-    <div class="full">
-      <span>Se descargan archivos PDF.</span>
-    </div>
+    <fieldset class="full">
+      <legend>Archivos solicitados</legend>
+      <label class="inline"><input type="checkbox" formControlName="pdf" />PDF</label>
+      <label class="inline"><input type="checkbox" formControlName="xml" />XML</label>
+    </fieldset>
     @if (form.controls.mode.value === 'Sri') {
       <p class="muted full">
         El rango máximo es de un año. Se consultan todos los comprobantes disponibles.
@@ -71,7 +73,7 @@ import { Api, Account, Query } from '../core/api';
       >
     }
     @if (invalidRange()) {
-      <p class="error full">Revise el rango de fechas y los tipos seleccionados.</p>
+      <p class="error full">Revise el rango, los tipos y los formatos seleccionados.</p>
     }
     <div class="actions full">
       <button [disabled]="form.invalid || api.busy()">{{ label() }}</button><ng-content />
@@ -117,7 +119,7 @@ export class QueryForm {
   loadConfiguration(index: string) {
     if (index === '') return;
     const q=this.configurations()[Number(index)]; if (!q) return;
-    this.form.patchValue({...q,pdf:true,xml:false,broadRangeApproved:false});
+    this.form.patchValue({...q,broadRangeApproved:false});
     this.selected.set([...q.types]);
   }
   toggle(type: string) {
@@ -126,11 +128,11 @@ export class QueryForm {
     );
   }
   value(): Query {
-    return { ...this.form.getRawValue(), types: this.selected(), pdf:true, xml:false };
+    return { ...this.form.getRawValue(), types: this.selected() };
   }
   submit() {
     const q = this.value();
-    this.invalidRange.set(q.from > q.to || q.to > this.today || !q.types.length);
+    this.invalidRange.set(q.from > q.to || q.to > this.today || !q.types.length || (!q.pdf && !q.xml));
     if (this.form.valid && !this.invalidRange()) this.submitted.emit(q);
   }
 }

@@ -3,7 +3,7 @@ import { DatePipe } from '@angular/common';
 import { FormsModule,ReactiveFormsModule,FormBuilder,Validators } from '@angular/forms';
 import { Api,Account } from '../../core/api';
 interface Session {status:string;verified:boolean;message:string;present:boolean;operation?:{browserOpened:boolean};}
-interface Agent {id:string;label:string;revokedAt:string|null;lastSeenAt?:string|null;online?:boolean;executionAvailable?:boolean;}
+interface Agent {id:string;label:string;revokedAt:string|null;lastSeenAt?:string|null;online?:boolean;busy?:boolean;executionAvailable?:boolean;}
 interface Settings {defaultAccount:string|null;downloadSubfolder:string|null;}
 @Component({imports:[FormsModule,ReactiveFormsModule,DatePipe],template:`
   <div class="page-heading"><div><p class="eyebrow">CONFIGURACION DEL SERVIDOR</p><h1>Configuración</h1><p>Cuentas, acceso al SRI y preferencias.</p></div></div>
@@ -61,7 +61,7 @@ interface Settings {defaultAccount:string|null;downloadSubfolder:string|null;}
 export class SettingsPage {
   api=inject(Api);fb=inject(FormBuilder);aliases=signal<Record<string,string>>({});accounts=signal<Account[]>([]);session=signal<Session|null>(null);selected=this.api.activeAccount();editName='';theme=localStorage.getItem('sri-theme')||'auto';destination=signal('');settings:Settings={defaultAccount:null,downloadSubfolder:null};
   agentLabel='';agents=signal<Agent[]>([]);newAgent=signal<{id:string;secret:string}|null>(null);
-  agentState(a:Agent){if(a.revokedAt)return 'Revocado';if(a.executionAvailable === false)return 'Registrado - credencial activa - ejecución remota deshabilitada';if(a.online === true)return 'Registrado - credencial activa - conectado';if(a.online === false)return a.lastSeenAt ? 'Registrado - credencial activa - desconectado' : 'Registrado - credencial activa - sin actividad registrada';return 'Registrado - credencial activa - conexión no disponible';}
+  agentState(a:Agent){if(a.revokedAt)return 'Revocado';if(a.executionAvailable === false)return 'Registrado - credencial activa - ejecución remota deshabilitada';if(a.online === true)return a.busy ? 'Ocupado' : 'Conectado';if(a.online === false)return a.lastSeenAt ? 'Desconectado' : 'Sin actividad registrada';return 'Estado de conexión no disponible';}
   async loadAgents(){const result=await this.api.action(()=>this.api.get<Agent[]>('delivery-agents'));if(result)this.agents.set(result);}
   async refreshAgents(){try{this.agents.set(await this.api.get<Agent[]>('delivery-agents'));}catch{/* El estado anterior no demuestra conexión actual. */this.agents.update(items=>items.map(a=>({...a,online:undefined,executionAvailable:undefined})));}}
   async registerAgent(){const result=await this.api.action(()=>this.api.post<{id:string;secret:string}>('delivery-agents',{label:this.agentLabel.trim()}),'Agente registrado.');if(result){this.newAgent.set(result);this.agentLabel='';await this.loadAgents();}}

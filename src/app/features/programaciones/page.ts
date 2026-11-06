@@ -9,7 +9,7 @@ import { QueryForm } from '../../shared/download-form';
       <div>
         <p class="eyebrow">AUTOMATIZACIÓN</p>
         <h1>Programaciones</h1>
-        <p>El Worker mantiene las tareas aunque cierre Angular. El bot usa la contraseña cifrada del perfil. CAPTCHA o MFA requieren intervención humana. La descarga fiscal automática continúa pendiente de validación real.</p>
+        <p>Las consultas SRI requieren que la computadora autorizada esté encendida, con la sesión de Windows iniciada y el agente conectado. Con el Worker del servidor pausado, no se garantiza que las programaciones se activen automáticamente a la hora prevista. CAPTCHA o MFA requieren intervención humana. La descarga fiscal automática continúa pendiente de validación real.</p>
       </div>
     </div>
     <section class="card">

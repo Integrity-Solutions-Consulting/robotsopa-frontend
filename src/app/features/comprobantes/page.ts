@@ -6,7 +6,7 @@ import { QueryForm } from '../../shared/download-form';
   <div class="page-heading"><div><h1>Comprobantes emitidos</h1><p>Configure la operación y siga su progreso.</p></div></div>
   <section class="card"><h2>Configurar descarga</h2><app-query-form [blocked]="submitting()" (submitted)="execute($event)"><button type="button" class="secondary" (click)="save()">Guardar configuración</button></app-query-form></section>
   <section class="bot-state" aria-label="Conexión del agente"><span>Agente Windows: {{agentStatus()}}</span></section>
-  <p class="muted">Con el agente remoto activo, los PDF y Excel confirmados se entregan en Escritorio / SRI-Automation / RUC / año / mes, en la carpeta del tipo o Reportes. Mantenga abierto el agente en el equipo Windows.</p>
+  <p class="muted">Con el agente remoto activo, los PDF y Excel confirmados se entregan en Escritorio / SRI-Automation / RUC / año / mes, en la carpeta del tipo o Reportes. Mantenga encendido el equipo Windows y la sesión iniciada.</p>
   @if(current();as e){
     <section class="card operation-progress" aria-label="Progreso de la operación" aria-live="polite" [attr.data-stage]="e.stage" [attr.aria-busy]="processing(e)">
       <div class="actions"><h2>Seguimiento de la ejecución</h2><span class="badge" [attr.data-status]="e.status">{{phase(e)}}</span>@if(processing(e)){<span class="spinner" aria-hidden="true"></span>}</div>
