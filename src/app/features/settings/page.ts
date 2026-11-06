@@ -49,8 +49,8 @@ interface Settings {defaultAccount:string|null;downloadSubfolder:string|null;}
       <p>Registre un agente por equipo con su usuario del panel. El secreto se muestra una sola vez. El agente procesa ?nicamente las tareas creadas por este usuario para cuentas autorizadas.</p>
       <label>Nombre del equipo<input [(ngModel)]="agentLabel" maxlength="100" /></label>
       <div class="actions"><button [disabled]="!agentLabel.trim()||api.busy()" (click)="registerAgent()">Registrar agente</button><button class="secondary" (click)="loadAgents()">Consultar agentes</button></div>
-      @if(newAgent();as a){<p>Guarde estas credenciales en el equipo antes de cerrar esta pantalla.</p><p>ID: <code>{{a.id}}</code></p><label>Secreto<input readonly [value]="a.secret" /></label><button class="secondary" (click)="newAgent.set(null)">Ocultar secreto</button>}
-      @for(a of agents();track a.id){<p><strong>{{a.label}}</strong> - {{agentState(a)}} @if(a.lastSeenAt){- Última actividad: {{a.lastSeenAt | date:'dd/MM/yyyy HH:mm:ss':'-0500'}}} @if(!a.revokedAt){<button class="danger" (click)="revokeAgent(a.id)">Revocar</button>}</p>}
+      @if(newAgent();as a){<p>Guarde estas credenciales en el equipo antes de cerrar esta pantalla.</p><p>ID: <code>{{a.id}}</code> <button class="secondary" (click)="copy(a.id)">Copiar ID</button></p><label>Secreto<input readonly [value]="a.secret" /></label><button class="secondary" (click)="copy(a.secret)">Copiar secreto</button><button class="secondary" (click)="newAgent.set(null)">Ocultar secreto</button>}
+      @for(a of agents();track a.id){<p><strong>{{a.label}}</strong> - {{agentState(a)}} @if(a.lastSeenAt){- Última actividad: {{a.lastSeenAt | date:'dd/MM/yyyy HH:mm:ss':'-0500'}}} @if(!a.revokedAt){<button class="secondary" (click)="rotateAgent(a.id)">Regenerar secreto</button> <button class="danger" (click)="revokeAgent(a.id)">Revocar</button>}</p>}
     </section>
     <section class="card"><h2>Preferencias</h2><div class="form-grid">
       <label>Apariencia<select [value]="theme" (change)="changeTheme($event)"><option value="light">Claro</option><option value="dark">Oscuro</option><option value="auto">Automático según sistema</option></select></label>
@@ -65,6 +65,8 @@ export class SettingsPage {
   async loadAgents(){const result=await this.api.action(()=>this.api.get<Agent[]>('delivery-agents'));if(result)this.agents.set(result);}
   async refreshAgents(){try{this.agents.set(await this.api.get<Agent[]>('delivery-agents'));}catch{/* El estado anterior no demuestra conexión actual. */this.agents.update(items=>items.map(a=>({...a,online:undefined,executionAvailable:undefined})));}}
   async registerAgent(){const result=await this.api.action(()=>this.api.post<{id:string;secret:string}>('delivery-agents',{label:this.agentLabel.trim()}),'Agente registrado.');if(result){this.newAgent.set(result);this.agentLabel='';await this.loadAgents();}}
+  async copy(value:string){try{await navigator.clipboard.writeText(value);this.api.notify('Copiado al portapapeles.');}catch{this.api.notify('No se pudo copiar. Seleccione y copie el valor manualmente.','error');}}
+  async rotateAgent(id:string){if(!confirm('?Regenerar el secreto? El agente dejar? de conectarse hasta que actualice sus credenciales.'))return;const result=await this.api.action(()=>this.api.post<{id:string;secret:string}>('delivery-agents/'+encodeURIComponent(id)+'/rotate',{}),'Secreto regenerado.');if(result){this.newAgent.set(result);await this.loadAgents();}}
   async revokeAgent(id:string){if(!confirm('¿Revocar este agente?'))return;await this.api.action(()=>this.api.delete('delivery-agents/'+encodeURIComponent(id)),'Agente revocado.');await this.loadAgents();}
   assignmentUser='';assignments=signal<string[]>([]);
   async loadAssignments(){this.assignments.set(this.assignmentUser?await this.api.get<string[]>('assignments/'+encodeURIComponent(this.assignmentUser)):[]);}
