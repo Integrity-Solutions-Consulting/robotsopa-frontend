@@ -41,7 +41,7 @@ import { Api, Account } from '../../core/api';
         <h2>Reportes listos</h2>
         @for (m of generated(); track m) {
           <p>
-            <a [href]="download(m)">Descargar Excel {{ m }}</a>
+            <a [href]="download(m)">Descargar Excel {{ monthLabel(m) }}</a>
           </p>
         }
       </section>
@@ -55,6 +55,11 @@ export class ReportesPage {
   end = '';
   generatedAccount = '';
   generated = signal<string[]>([]);
+  monthLabel(value: string): string {
+    const [year, month] = value.split('-');
+    const names = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    return `${year} / ${month} - ${names[Number(month) - 1] ?? ''}`;
+  }
   constructor() {
     void this.api.action(async () => this.accounts.set(await this.api.get<Account[]>('accounts')));
   }
