@@ -39,6 +39,7 @@ export interface Execution {
   found: number;
   processed: number;
   errors: number;
+  reviews?: number;
   message?: string;
   checkpoint?: string;
   downloaded?: number;

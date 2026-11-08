@@ -48,7 +48,7 @@ import { Api, Execution, Account } from '../../core/api';
                     </label>
                   }
                 </td>
-                <td>{{ e.processed }} / {{ e.found }} · {{ e.errors }} errores</td>
+                <td>{{ e.processed }} / {{ e.found }} · {{ e.reviews ?? 0 }} en revisión · {{ e.errors }} errores</td>
                 <td>
                   <details>
                     <summary>Ver detalles</summary>

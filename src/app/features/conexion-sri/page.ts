@@ -52,7 +52,7 @@ interface SystemInfo { outputHostPath: string; sri: string; }
       <section class="card"><h2>3. Progreso y resultados</h2>
         <p>Cuenta {{ e.query.account }} · {{ e.query.from }} · {{ e.query.types.join(', ') }}</p>
         <p>Estado: <strong data-testid="execution-status">{{ e.status }}</strong> · Etapa: {{ e.stage || e.status }}</p>
-        <p>{{ e.processed }} procesados · {{ e.found }} encontrados · {{ e.downloaded || 0 }} descargados · {{ e.errors }} pendientes</p>
+        <p>{{ e.processed }} procesados · {{ e.found }} encontrados · {{ e.downloaded || 0 }} descargados · {{ e.reviews ?? 0 }} en revisión · {{ e.errors }} errores</p>
         <p>{{ e.message }}</p><p>Checkpoint: {{ e.checkpoint || 'Pendiente' }}</p>
         @for (issue of e.issues || []; track $index) { <p class="error">{{ issue }}</p> }
         <div class="actions">
