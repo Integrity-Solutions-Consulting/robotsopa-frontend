@@ -1,10 +1,11 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Api, Account, Voucher } from '../../core/api';
+import { ExploradorComponent } from './explorador';
 @Component({
   selector:'sri-documentos',
-  imports: [FormsModule],
-  template: ` <div class="page-heading">
+  imports: [FormsModule, ExploradorComponent],
+  template: ` <sri-explorador /> <div class="page-heading">
       <div>
         <p class="eyebrow">ARCHIVO DIGITAL</p>
         <h1>Documentos</h1>

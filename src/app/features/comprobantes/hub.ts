@@ -14,4 +14,4 @@ import { ProgramacionesPage } from '../programaciones/page';
     @case('excel'){<sri-reportes />}
     @case('programacion'){<sri-programaciones />}
   }</div>`})
-export class ComprobantesHub {section=signal('consulta');tools=[['consulta','Descargar comprobantes'],['documentos','Documentos descargados'],['excel','Generar / Actualizar Excel'],['programacion','Programar descarga']];}
+export class ComprobantesHub {section=signal('consulta');tools=[['consulta','Descargar comprobantes'],['documentos','Mis documentos'],['excel','Generar / Actualizar Excel'],['programacion','Programar descarga']];}
